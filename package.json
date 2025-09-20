@@ -1,11 +1,11 @@
 {
-  "name": "vite-web-extension",
-  "version": "1.4.0",
-  "description": "A simple chrome & firefox extension template with Vite, React, TypeScript and Tailwind CSS.",
+  "name": "cambridge-dictionary-pop",
+  "version": "1.0.0",
+  "description": "A browser extension that allows you to quickly look up word definitions from Cambridge Dictionary.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/JohnBra/vite-web-extension.git"
+    "url": "https://github.com/WantenMN/cambridge-dictionary-pop"
   },
   "scripts": {
     "build": "vite build --config vite.config.chrome.ts",

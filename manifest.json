@@ -1,24 +1,21 @@
 {
   "manifest_version": 3,
-  "name": "name in manifest.json",
-  "description": "description in manifest.json",
-  "options_ui": {
-    "page": "src/pages/options/index.html"
-  },
+  "name": "Cambridge Dictionary Pop",
+  "description": "A browser extension that allows you to quickly look up word definitions from Cambridge Dictionary.",
   "action": {
-    "default_popup": "src/pages/popup/index.html",
     "default_icon": {
       "32": "icon-32.png"
     }
-  },
-  "chrome_url_overrides": {
-    "newtab": "src/pages/newtab/index.html"
   },
   "icons": {
     "128": "icon-128.png"
   },
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://dictionary.cambridge.org/*"
   ],
   "content_scripts": [
     {
@@ -35,7 +32,7 @@
       ]
     }
   ],
-  "devtools_page": "src/pages/devtools/index.html",
+
   "web_accessible_resources": [
     {
       "resources": [
