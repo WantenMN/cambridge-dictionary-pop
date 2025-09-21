@@ -40,7 +40,9 @@
         "icon-128.png",
         "icon-32.png"
       ],
-      "matches": []
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

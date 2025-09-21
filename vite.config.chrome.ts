@@ -8,10 +8,17 @@ const outDir = resolve(__dirname, 'dist_chrome');
 export default mergeConfig(
   baseConfig,
   defineConfig({
+    define: {
+      'process.env.BROWSER': '"chrome"',
+    },
     plugins: [
       crx({
         manifest: {
           ...baseManifest,
+          permissions: [
+            ...((baseManifest as any).permissions || []),
+            'offscreen'
+          ],
           background: {
             service_worker: 'src/pages/background/index.ts',
             type: 'module'
