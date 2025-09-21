@@ -1,7 +1,12 @@
-@import "tailwindcss";
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+.cdp-popup {
+  @import "tailwindcss/preflight.css" layer(base);
+}
+@import "tailwindcss/utilities.css" layer(utilities);
 
 .cdp-icon {
-  font-size: 0; 
+  font-size: 0;
   text-indent: -9999px;
 }
 
