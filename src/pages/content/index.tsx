@@ -363,29 +363,44 @@ const createIcon = (x: number, y: number, rectBottom: number): HTMLDivElement =>
   }
 
   const iconHeight = 30; // Assuming a fixed height for the icon from its CSS
-
-  // Calculate the top position if placed above the selection
-  const topPositionIfAbove = y + window.scrollY - 60;
-  // Calculate the top position if placed below the selection
-  const topPositionIfBelow = rectBottom + window.scrollY + 30;
+  const iconWidth = 30; // Assuming a fixed width for the icon
+  const MOBILE_BREAKPOINT = 600; // Breakpoint for mobile devices
 
   let finalIconTop;
 
-  // Check if placing it above would make it go off the top of the screen
-  if (topPositionIfAbove < window.scrollY) {
-    finalIconTop = topPositionIfBelow;
-  }
-  // Check if placing it above would make it go off the bottom of the screen
-  else if (topPositionIfAbove + iconHeight > window.scrollY + window.innerHeight) {
-    finalIconTop = topPositionIfBelow;
-  }
-  // Otherwise, place it above
-  else {
-    finalIconTop = topPositionIfAbove;
+  if (window.innerWidth < MOBILE_BREAKPOINT) {
+    // Mobile device: prioritize placing below
+    const topPositionIfBelow = rectBottom + window.scrollY + 30; // Original offset for below
+    const topPositionIfAbove = y + window.scrollY - 60; // Original offset for above
+
+    if (topPositionIfBelow + iconHeight < window.scrollY + window.innerHeight) {
+      finalIconTop = topPositionIfBelow;
+    } else if (topPositionIfAbove > window.scrollY) {
+      finalIconTop = topPositionIfAbove;
+    } else {
+      // Fallback if both are problematic, default to below
+      finalIconTop = topPositionIfBelow;
+    }
+  } else {
+    // Desktop device: use original logic (prioritize above)
+    const topPositionIfAbove = y + window.scrollY - 60;
+    const topPositionIfBelow = rectBottom + window.scrollY + 30;
+
+    if (topPositionIfAbove < window.scrollY) {
+      finalIconTop = topPositionIfBelow;
+    }
+    // Check if placing it above would make it go off the bottom of the screen
+    else if (topPositionIfAbove + iconHeight > window.scrollY + window.innerHeight) {
+      finalIconTop = topPositionIfBelow;
+    }
+    // Otherwise, place it above
+    else {
+      finalIconTop = topPositionIfAbove;
+    }
   }
 
   iconElement.style.top = `${finalIconTop}px`;
-  iconElement.style.left = `${x + window.scrollX - iconElement.offsetWidth / 2}px`;
+  iconElement.style.left = `${x + window.scrollX - iconWidth / 2}px`; // Center horizontally
   iconElement.style.display = "block";
 
   return iconElement;
