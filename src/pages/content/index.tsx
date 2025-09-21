@@ -183,7 +183,7 @@ const App = ({ initialWord }: { initialWord: string }) => {
   };
 
   return (
-    <div className="cdp-popup flex flex-col bg-[#222] text-white/90 fixed top-5 left-5 z-[99999] rounded-lg shadow-xl w-[600px] h-[calc(100vh-40px)]">
+    <div className="cdp-popup flex flex-col bg-[#222] text-white/90 fixed top-5 z-[99999] rounded-lg shadow-xl h-[calc(100vh-40px)] w-[calc(100%-40px)] max-w-[600px] left-5">
       <div className="flex flex-col sticky top-0 z-10 border-b border-[#393939]!">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl! m-4! p-0!">
@@ -301,7 +301,7 @@ const SearchInput = ({
         onSearch();
       }
     }}
-    className="flex-grow h-8 px-2 rounded-md border w-auto! border-zinc-700! bg-zinc-800! text-white/90! focus:outline-none focus:border-blue-500!"
+    className="flex-grow h-8 px-2 rounded-md border min-w-0 border-zinc-700! bg-zinc-800! text-white/90! focus:outline-none focus:border-blue-500!"
     placeholder="Search for a new word..."
   />
 );
