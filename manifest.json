@@ -2,6 +2,11 @@
   "manifest_version": 3,
   "name": "Cambridge Dictionary Pop",
   "description": "A browser extension that allows you to quickly look up word definitions from Cambridge Dictionary.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "cambridge-dictionary-pop@wanten.org"
+    }
+  },
   "action": {
     "default_icon": {
       "32": "icon-32.png"
