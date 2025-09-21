@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import browser from "webextension-polyfill";
+import DOMPurify from "dompurify";
 import "./style.css";
 import "./cdp.scss";
 
@@ -213,7 +214,7 @@ const App = ({ initialWord }: { initialWord: string }) => {
         {isLoading ? (
           <p className="mb-0 leading-relaxed text-sm cdp-content-fade-in">Loading definition...</p>
         ) : (
-          <div className="cdp-content-fade-in" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+          <div className="cdp-content-fade-in" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlContent) }} />
         )}
       </div>
     </div>
