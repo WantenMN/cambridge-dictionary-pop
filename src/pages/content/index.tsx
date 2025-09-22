@@ -337,7 +337,7 @@ const createIcon = (x: number, y: number, rectBottom: number): HTMLDivElement =>
     iconElement = document.createElement("div");
     iconElement.id = ICON_ID;
     iconElement.className =
-      "cdp-icon absolute z-[99999] cursor-pointer text-white rounded-full w-[30px] h-[30px] flex items-center justify-center bg-cover bg-no-repeat bg-center shadow-md";
+      "cdp-icon absolute z-[99999] cursor-pointer text-white rounded-full w-[30px] h-[30px] flex items-center justify-center bg-cover bg-no-repeat bg-center shadow-md transition-all duration-300 ease-out";
     iconElement.style.backgroundImage = `url(${browser.runtime.getURL("icon-128.png")})`;
     document.body.appendChild(iconElement);
 
@@ -399,6 +399,10 @@ const createIcon = (x: number, y: number, rectBottom: number): HTMLDivElement =>
     }
   }
 
+  // Animate the icon to the new position
+  iconElement.style.transitionProperty = "top, left";
+  iconElement.style.transitionDuration = "0.3s";
+  iconElement.style.transitionTimingFunction = "ease-out";
   iconElement.style.top = `${finalIconTop}px`;
   iconElement.style.left = `${x + window.scrollX - iconWidth / 2}px`; // Center horizontally
   iconElement.style.display = "block";
@@ -533,6 +537,19 @@ document.addEventListener("mouseup", (event) => {
       return;
     }
     
+    // If icon is already displayed for the same selected text, do nothing.
+    if (iconElement && iconElement.style.display === "block" && selectedText === currentSelectedText) {
+      return;
+    }
+
+    // If a new selection is made and icon already exists, animate it to the new position
+    if (iconElement && iconElement.style.display === "block" && selectedText !== currentSelectedText) {
+      currentSelectedText = selectedText;
+      const rect = range.getBoundingClientRect();
+      createIcon(event.clientX, rect.top, rect.bottom);
+      return;
+    }
+
     // If a new selection is made, and the popup is currently open, close it first.
     if (isPopupOpen) {
       removeElements(); // Close the existing popup and icon

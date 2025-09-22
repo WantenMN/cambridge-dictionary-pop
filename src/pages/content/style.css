@@ -8,6 +8,7 @@
 .cdp-icon {
   font-size: 0;
   text-indent: -9999px;
+  transition: top 0.3s ease-out, left 0.3s ease-out;
 }
 
 .cdp-popup a {
