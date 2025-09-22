@@ -445,9 +445,13 @@ const removeElements = () => {
  * Check if text contains only ASCII characters
  */
 const isAsciiOnly = (text: string): boolean => {
-  // ASCII character range is 0-127
+  // Allowed non-ASCII characters
+  const allowedNonAscii = new Set(['“', '”', '’', '‘', '…', '–', '—']);
+
   for (let i = 0; i < text.length; i++) {
-    if (text.charCodeAt(i) > 127) {
+    const charCode = text.charCodeAt(i);
+    // Check if it's outside ASCII range and not in the allowed non-ASCII set
+    if (charCode > 127 && !allowedNonAscii.has(text[i])) {
       return false;
     }
   }
