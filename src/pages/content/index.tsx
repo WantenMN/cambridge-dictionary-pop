@@ -487,6 +487,14 @@ const spansMoreThanTwoLines = (range: Range): boolean => {
 };
 
 /**
+ * Count the number of words in a string
+ * Splits text on whitespace and filters out empty strings
+ */
+const countWords = (text: string): number => {
+  return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+};
+
+/**
  * Handle text selection events
  */
 document.addEventListener("mouseup", (event) => {
@@ -508,12 +516,19 @@ document.addEventListener("mouseup", (event) => {
   const selection = window.getSelection();
   const selectedText = selection?.toString().trim();
 
-  // Check if selection is valid (not empty, not collapsed, contains only ASCII characters, and doesn't span more than two lines)
+  // Check if selection is valid (not empty, not collapsed, contains only ASCII characters, 
+  // doesn't span more than two lines, and doesn't exceed 15 words)
   if (selectedText && selectedText.length > 0 && selection && selection.rangeCount > 0 && !selection.isCollapsed && isAsciiOnly(selectedText)) {
     const range = selection.getRangeAt(0);
     
     // If selected text spans more than two lines, don't show the popup
     if (spansMoreThanTwoLines(range)) {
+      removeElements();
+      return;
+    }
+    
+    // If selected text exceeds 15 words, don't show the popup
+    if (countWords(selectedText) > 15) {
       removeElements();
       return;
     }
@@ -526,7 +541,8 @@ document.addEventListener("mouseup", (event) => {
     const rect = range.getBoundingClientRect();
     createIcon(event.clientX, rect.top, rect.bottom);
   } else {
-    // No text selected, selection collapsed, contains non-ASCII characters, or spans too many lines. Close popup/icon if they exist.
+    // No text selected, selection collapsed, contains non-ASCII characters, 
+    // spans too many lines, or exceeds word limit. Close popup/icon if they exist.
     removeElements();
   }
 });
