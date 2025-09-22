@@ -455,6 +455,14 @@ const isAsciiOnly = (text: string): boolean => {
 };
 
 /**
+ * Check if selected text spans more than two lines using getClientRects()
+ */
+const spansMoreThanTwoLines = (range: Range): boolean => {
+  const clientRects = range.getClientRects();
+  return clientRects.length > 2;
+};
+
+/**
  * Handle text selection events
  */
 document.addEventListener("mouseup", (event) => {
@@ -476,18 +484,25 @@ document.addEventListener("mouseup", (event) => {
   const selection = window.getSelection();
   const selectedText = selection?.toString().trim();
 
-  // Check if selection is valid (not empty, not collapsed, and contains only ASCII characters)
+  // Check if selection is valid (not empty, not collapsed, contains only ASCII characters, and doesn't span more than two lines)
   if (selectedText && selectedText.length > 0 && selection && selection.rangeCount > 0 && !selection.isCollapsed && isAsciiOnly(selectedText)) {
+    const range = selection.getRangeAt(0);
+    
+    // If selected text spans more than two lines, don't show the popup
+    if (spansMoreThanTwoLines(range)) {
+      removeElements();
+      return;
+    }
+    
     // If a new selection is made, and the popup is currently open, close it first.
     if (isPopupOpen) {
       removeElements(); // Close the existing popup and icon
     }
     currentSelectedText = selectedText;
-    const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
     createIcon(event.clientX, rect.top, rect.bottom);
   } else {
-    // No text selected, selection collapsed, or contains non-ASCII characters. Close popup/icon if they exist.
+    // No text selected, selection collapsed, contains non-ASCII characters, or spans too many lines. Close popup/icon if they exist.
     removeElements();
   }
 });
