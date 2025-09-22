@@ -16,6 +16,7 @@ const FILTER_SELECTORS: string[] = [
   ".i.i-plus.ca_hi",
   ".i.i-comment.fs14",
   ".lmt-10.hax",
+  ".meta.dmeta",
 ];
 
 interface Message {
