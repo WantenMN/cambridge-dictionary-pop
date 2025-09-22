@@ -32,3 +32,7 @@ This extension goes beyond basic lookup, offering a rich set of features to make
     *   **History**: Use the back and forward buttons to navigate through your recent lookups.
     *   **Internal Links**: Click on any word within the definition content to look up its meaning instantly.
 5.  **Close the Popup**: Click anywhere outside the popup to close it.
+
+## Installation and Usage Instructions
+
+For detailed instructions on how to build, install, and use the extension in Chrome or Firefox, please refer to the [USAGE.md](USAGE.md) file.
