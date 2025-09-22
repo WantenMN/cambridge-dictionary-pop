@@ -459,11 +459,31 @@ const isAsciiOnly = (text: string): boolean => {
 };
 
 /**
- * Check if selected text spans more than two lines using getClientRects()
+ * Check if selected text spans more than two lines
+ * This function now properly accounts for selections that span HTML elements
+ * by checking the actual visual line positions rather than just counting rectangles
  */
 const spansMoreThanTwoLines = (range: Range): boolean => {
   const clientRects = range.getClientRects();
-  return clientRects.length > 2;
+  
+  // If there are no rectangles, the selection is invalid
+  if (clientRects.length === 0) return false;
+  
+  // If there's only one rectangle, it can't span more than two lines
+  if (clientRects.length === 1) return false;
+  
+  // Get the unique line positions by rounding the top coordinates
+  // This accounts for slight differences in positioning that might occur
+  // due to inline elements, text decorations, etc.
+  const linePositions = new Set<number>();
+  for (let i = 0; i < clientRects.length; i++) {
+    // Round to nearest pixel to account for sub-pixel differences
+    const linePos = Math.round(clientRects[i].top);
+    linePositions.add(linePos);
+  }
+  
+  // If we have 2 or fewer unique line positions, it doesn't span more than two lines
+  return linePositions.size > 2;
 };
 
 /**
