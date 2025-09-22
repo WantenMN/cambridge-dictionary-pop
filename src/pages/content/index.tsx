@@ -442,6 +442,19 @@ const removeElements = () => {
 };
 
 /**
+ * Check if text contains only ASCII characters
+ */
+const isAsciiOnly = (text: string): boolean => {
+  // ASCII character range is 0-127
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) > 127) {
+      return false;
+    }
+  }
+  return true;
+};
+
+/**
  * Handle text selection events
  */
 document.addEventListener("mouseup", (event) => {
@@ -463,7 +476,8 @@ document.addEventListener("mouseup", (event) => {
   const selection = window.getSelection();
   const selectedText = selection?.toString().trim();
 
-  if (selectedText && selectedText.length > 0 && selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+  // Check if selection is valid (not empty, not collapsed, and contains only ASCII characters)
+  if (selectedText && selectedText.length > 0 && selection && selection.rangeCount > 0 && !selection.isCollapsed && isAsciiOnly(selectedText)) {
     // If a new selection is made, and the popup is currently open, close it first.
     if (isPopupOpen) {
       removeElements(); // Close the existing popup and icon
@@ -473,7 +487,7 @@ document.addEventListener("mouseup", (event) => {
     const rect = range.getBoundingClientRect();
     createIcon(event.clientX, rect.top, rect.bottom);
   } else {
-    // No text selected, or selection collapsed. Close popup/icon if they exist.
+    // No text selected, selection collapsed, or contains non-ASCII characters. Close popup/icon if they exist.
     removeElements();
   }
 });
