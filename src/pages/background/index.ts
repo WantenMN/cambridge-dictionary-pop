@@ -17,6 +17,9 @@ const FILTER_SELECTORS: string[] = [
   ".i.i-comment.fs14",
   ".lmt-10.hax",
   ".meta.dmeta",
+  ".daccord",
+  ".smartt.daccord",
+  ".fixed.top-0.left-0.w-full "
 ];
 
 interface Message {

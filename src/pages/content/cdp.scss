@@ -884,6 +884,16 @@
         margin-bottom: 10px
     }
 
+    .phrase-head.dphrase_h {
+        margin-top: 10px;
+        svg {
+            width: 16px;
+            height: 16px;
+            color: white !important;
+            fill: white !important;
+        }
+    }
+
     .ddivide::before {
         content: "•";
         margin-left: 5px;
