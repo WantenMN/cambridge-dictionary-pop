@@ -15,10 +15,6 @@
   "icons": {
     "128": "icon-128.png"
   },
-  "permissions": [
-    "activeTab",
-    "scripting"
-  ],
   "host_permissions": [
     "https://dictionary.cambridge.org/*"
   ],
