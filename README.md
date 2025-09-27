@@ -33,6 +33,16 @@ This extension goes beyond basic lookup, offering a rich set of features to make
     *   **Internal Links**: Click on any word within the definition content to look up its meaning instantly.
 5.  **Close the Popup**: Click anywhere outside the popup to close it.
 
-## Installation and Usage Instructions
+## Installation
 
-For detailed instructions on how to build, install, and use the extension in Chrome or Firefox, please refer to the [USAGE.md](USAGE.md) file.
+*   Firefox: [Add-on Page](https://addons.mozilla.org/en-US/firefox/addon/cambridge-dictionary-pop)
+*   Chrome: [Chrome Web Store](https://chromewebstore.google.com/detail/cambridge-dictionary-pop/gepbilmfhpebnaaeekkeeflahacdgcid)
+*   Edge: [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/cambridge-dictionary-pop/onmipdkoojocedlpjlhgbmjhidbffddn)
+
+## Demo
+
+*   [YouTube Demo Video](https://youtu.be/VkYkZPRt1xM)
+
+## Development
+
+For detailed instructions on how to build, develop, and install the extension in Chrome or Firefox, please refer to the [DEVELOPMENT.md](DEVELOPMENT.md) file.

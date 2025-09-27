@@ -90,8 +90,6 @@ This will start the development server and generate a development version of the
 - **Styling**: Styled with Tailwind CSS
 - **Compatibility**: Follows Manifest V3 specification
 - **Permissions**:
-  - `activeTab`: Access the currently active tab
-  - `scripting`: Execute scripts on web pages
   - `host_permissions`: Access to https://dictionary.cambridge.org/*
 
 ## Notes
