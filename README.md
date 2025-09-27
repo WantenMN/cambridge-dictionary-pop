@@ -39,9 +39,11 @@ This extension goes beyond basic lookup, offering a rich set of features to make
 *   Chrome: [Chrome Web Store](https://chromewebstore.google.com/detail/cambridge-dictionary-pop/gepbilmfhpebnaaeekkeeflahacdgcid)
 *   Edge: [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/cambridge-dictionary-pop/onmipdkoojocedlpjlhgbmjhidbffddn)
 
-## Demo
+## Video Demo
 
 *   [YouTube Demo Video](https://youtu.be/VkYkZPRt1xM)
+
+https://github.com/user-attachments/assets/010fba37-c76d-40fc-bfcb-19a02ebc7496
 
 ## Development
 
