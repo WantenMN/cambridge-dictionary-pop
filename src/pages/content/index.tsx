@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import browser from "webextension-polyfill";
 import DOMPurify from "dompurify";
-import "./style.css";
-import "./cdp.scss";
+import styles from "./style.css?inline";
+import scssStyles from "./cdp.scss?inline";
 
 // Constants
 const POPUP_ID = "cambridge-dictionary-pop-popup";
@@ -329,18 +329,46 @@ const createPopupContainer = (): HTMLDivElement => {
   return popupContainer;
 };
 
+const injectIconStyles = () => {
+  const styleId = 'cambridge-dictionary-pop-icon-styles';
+  if (document.getElementById(styleId)) return; // Only inject once
+
+  const styleEl = document.createElement('style');
+  styleEl.id = styleId;
+  styleEl.textContent = `
+    #${ICON_ID} {
+      position: absolute;
+      z-index: 99999;
+      cursor: pointer;
+      width: 30px;
+      height: 30px;
+      border-radius: 9999px; /* rounded-full */
+      display: flex; /* flex */
+      align-items: center; /* items-center */
+      justify-content: center; /* justify-center */
+      background-size: cover; /* bg-cover */
+      background-repeat: no-repeat; /* bg-no-repeat */
+      background-position: center; /* bg-center */
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md */
+      transition-property: all; /* transition-all */
+      transition-duration: 300ms; /* duration-300 */
+      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); /* ease-out */
+      color: white; /* text-white */
+    }
+  `;
+  document.head.appendChild(styleEl);
+};
+
 /**
  * Create or update the dictionary icon element
  */
 const createIcon = (x: number, y: number, rectBottom: number): HTMLDivElement => {
-  if (!iconElement) {
-    iconElement = document.createElement("div");
-    iconElement.id = ICON_ID;
-    iconElement.className =
-      "cdp-icon absolute z-[99999] cursor-pointer text-white rounded-full w-[30px] h-[30px] flex items-center justify-center bg-cover bg-no-repeat bg-center shadow-md transition-all duration-300 ease-out";
-    iconElement.style.backgroundImage = `url(${browser.runtime.getURL("icon-128.png")})`;
-    document.body.appendChild(iconElement);
-
+        if (!iconElement) {
+          injectIconStyles(); // Inject styles when icon is first created
+          iconElement = document.createElement("div");
+          iconElement.id = ICON_ID;
+          iconElement.style.backgroundImage = `url(${browser.runtime.getURL("icon-128.png")})`;
+          document.body.appendChild(iconElement);
     // Handle click event
     iconElement.onclick = (e) => {
       e.stopPropagation();
@@ -419,11 +447,28 @@ const showPopup = () => {
     return;
   }
 
-  const popupContainer = createPopupContainer();
-  popupContainer.style.display = "block";
+  const popupHost = createPopupContainer();
+  popupHost.style.display = "block";
+
+  let shadowRoot = popupHost.shadowRoot;
+  let appContainer: HTMLDivElement;
+
+  if (!shadowRoot) {
+    shadowRoot = popupHost.attachShadow({ mode: 'open' });
+
+    const styleSheet = document.createElement('style');
+    // Injecting the imported style strings
+    styleSheet.textContent = styles + scssStyles;
+    shadowRoot.appendChild(styleSheet);
+
+    appContainer = document.createElement('div');
+    shadowRoot.appendChild(appContainer);
+  } else {
+    appContainer = shadowRoot.querySelector('div')!;
+  }
   
   if (!popupRoot) {
-    popupRoot = ReactDOM.createRoot(popupContainer);
+    popupRoot = ReactDOM.createRoot(appContainer);
   }
   
   popupRoot.render(<App initialWord={currentSelectedText} />);
