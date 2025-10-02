@@ -556,12 +556,6 @@ document.addEventListener("mouseup", (event) => {
     return;
   }
 
-  // Prevent default browser behavior that might clear selection, but only if it's a left click
-  if (event.button === 0) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
   const selection = window.getSelection();
   const selectedText = selection?.toString().trim();
 
