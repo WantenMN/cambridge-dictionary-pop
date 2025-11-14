@@ -4,7 +4,12 @@
   "description": "A browser extension that allows you to quickly look up word definitions from Cambridge Dictionary.",
   "browser_specific_settings": {
     "gecko": {
-      "id": "cambridge-dictionary-pop@wanten.org"
+      "id": "cambridge-dictionary-pop@wanten.org",
+      "data_collection_permissions": {
+        "required": [
+          "websiteContent"
+        ]
+      }
     }
   },
   "action": {
@@ -30,7 +35,6 @@
       ]
     }
   ],
-
   "web_accessible_resources": [
     {
       "resources": [

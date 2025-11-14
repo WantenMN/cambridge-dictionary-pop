@@ -214,7 +214,7 @@ const App = ({ initialWord }: { initialWord: string }) => {
         {isLoading ? (
           <p className="mb-0 leading-relaxed text-sm cdp-content-fade-in">Loading definition...</p>
         ) : (
-          <div className="cdp-content-fade-in" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlContent, { ADD_ATTR: ['target'] }) }} />
+          <div className="cdp-content-fade-in" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlContent, { ADD_ATTR: ['target', 'onclick'] }) }} />
         )}
       </div>
     </div>

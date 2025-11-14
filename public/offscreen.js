@@ -35,6 +35,26 @@ async function handleMessages(message) {
       link.setAttribute('rel', 'noopener noreferrer');
     });
 
+    const audioSources = definitionBlock.querySelectorAll('source[type="audio/mpeg"]');
+    audioSources.forEach(source => {
+      const src = source.getAttribute('src');
+      if (src && src.startsWith('/')) {
+        source.setAttribute('src', cambridgeHost + src);
+      }
+    });
+
+    definitionBlock.querySelectorAll('span.daud div[onclick]').forEach(div => {
+      div.className = 'i-volume-up';
+      const onclickAttr = div.getAttribute('onclick');
+      if (onclickAttr) {
+        const match = onclickAttr.match(/(audio\d+)\./);
+        if (match && match[1]) {
+          const audioId = match[1];
+          div.setAttribute('onclick', `this.getRootNode().querySelector('#${audioId}').play()`);
+        }
+      }
+    });
+
     chrome.runtime.sendMessage({
       type: 'parse-definition-response',
       payload: definitionBlock.innerHTML

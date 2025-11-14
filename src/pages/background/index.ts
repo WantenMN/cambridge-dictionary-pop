@@ -12,7 +12,6 @@ console.log(`Background script loaded for ${process.env.BROWSER}!`);
 const FILTER_SELECTORS: string[] = [
   ".pr.x.lbb.lb-cm",
   ".dwl.hax",
-  ".daud",
   ".i.i-plus.ca_hi",
   ".i.i-comment.fs14",
   ".lmt-10.hax",
@@ -117,6 +116,26 @@ const parseDefinitionWithDOMParser = (html: string): string => {
     }
     link.setAttribute('target', '_blank');
     link.setAttribute('rel', 'noopener noreferrer');
+  });
+
+  const audioSources = definitionBlock.querySelectorAll('source[type="audio/mpeg"]');
+  audioSources.forEach(source => {
+    const src = source.getAttribute('src');
+    if (src && src.startsWith('/')) {
+      source.setAttribute('src', CAMBRIDGE_HOST + src);
+    }
+  });
+
+  definitionBlock.querySelectorAll('span.daud div[onclick]').forEach(div => {
+    div.className = 'i-volume-up';
+    const onclickAttr = div.getAttribute('onclick');
+    if (onclickAttr) {
+      const match = onclickAttr.match(/(audio\d+)\./);
+      if (match && match[1]) {
+        const audioId = match[1];
+        div.setAttribute('onclick', `this.getRootNode().querySelector('#${audioId}').play()`);
+      }
+    }
   });
 
   return definitionBlock.innerHTML;
