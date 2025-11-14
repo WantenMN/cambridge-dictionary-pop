@@ -7,7 +7,7 @@
       "id": "cambridge-dictionary-pop@wanten.org",
       "data_collection_permissions": {
         "required": [
-          "websiteContent"
+          "none"
         ]
       }
     }
