@@ -1,7 +1,24 @@
 chrome.runtime.onMessage.addListener(handleMessages);
 
+let audioPlayer;
+
+function getAudioPlayer() {
+  if (!audioPlayer) {
+    audioPlayer = document.createElement('audio');
+    document.body.appendChild(audioPlayer);
+  }
+  return audioPlayer;
+}
+
 async function handleMessages(message) {
   if (message.target !== 'offscreen') {
+    return;
+  }
+
+  if (message.type === 'play-audio') {
+    const player = getAudioPlayer();
+    player.src = message.data.src;
+    player.play();
     return;
   }
 
@@ -35,14 +52,6 @@ async function handleMessages(message) {
       link.setAttribute('rel', 'noopener noreferrer');
     });
 
-    const audioSources = definitionBlock.querySelectorAll('source[type="audio/mpeg"]');
-    audioSources.forEach(source => {
-      const src = source.getAttribute('src');
-      if (src && src.startsWith('/')) {
-        source.setAttribute('src', cambridgeHost + src);
-      }
-    });
-
     definitionBlock.querySelectorAll('span.daud div[onclick]').forEach(div => {
       div.className = 'i-volume-up';
       const onclickAttr = div.getAttribute('onclick');
@@ -50,10 +59,25 @@ async function handleMessages(message) {
         const match = onclickAttr.match(/(audio\d+)\./);
         if (match && match[1]) {
           const audioId = match[1];
-          div.setAttribute('onclick', `this.getRootNode().querySelector('#${audioId}').play()`);
+          const audioEl = doc.querySelector(`#${audioId}`);
+          if (audioEl) {
+            const sourceEl = audioEl.querySelector('source[type="audio/mpeg"]');
+            if (sourceEl) {
+              let src = sourceEl.getAttribute('src');
+              if (src) {
+                if (src.startsWith('/')) {
+                  src = cambridgeHost + src;
+                }
+                div.setAttribute('data-audio-src', src);
+              }
+            }
+          }
         }
       }
+      div.removeAttribute('onclick');
     });
+
+    definitionBlock.querySelectorAll('audio.hdn').forEach(el => el.remove());
 
     chrome.runtime.sendMessage({
       type: 'parse-definition-response',

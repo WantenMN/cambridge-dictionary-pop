@@ -180,6 +180,13 @@ const App = ({ initialWord }: { initialWord: string }) => {
         }
       }
     }
+
+    if (target.classList.contains('i-volume-up') && target.hasAttribute('data-audio-src')) {
+      const audioSrc = target.getAttribute('data-audio-src');
+      if (audioSrc) {
+        browser.runtime.sendMessage({ type: 'play-audio', src: audioSrc });
+      }
+    }
   };
 
   return (
@@ -214,7 +221,7 @@ const App = ({ initialWord }: { initialWord: string }) => {
         {isLoading ? (
           <p className="mb-0 leading-relaxed text-sm cdp-content-fade-in">Loading definition...</p>
         ) : (
-          <div className="cdp-content-fade-in" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlContent, { ADD_ATTR: ['target', 'onclick'] }) }} />
+          <div className="cdp-content-fade-in" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlContent, { ADD_ATTR: ['target', 'data-audio-src'] }) }} />
         )}
       </div>
     </div>

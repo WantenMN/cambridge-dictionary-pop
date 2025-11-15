@@ -90,6 +90,15 @@ async function parseDefinitionInOffscreen(html: string): Promise<string> {
     });
   });
 }
+
+async function playAudioInOffscreen(src: string) {
+  await setupOffscreenDocument('offscreen.html');
+  await chrome.runtime.sendMessage({
+    target: 'offscreen',
+    type: 'play-audio',
+    data: { src },
+  });
+}
 // --- End of Chrome-specific implementation ---
 
 
@@ -118,14 +127,6 @@ const parseDefinitionWithDOMParser = (html: string): string => {
     link.setAttribute('rel', 'noopener noreferrer');
   });
 
-  const audioSources = definitionBlock.querySelectorAll('source[type="audio/mpeg"]');
-  audioSources.forEach(source => {
-    const src = source.getAttribute('src');
-    if (src && src.startsWith('/')) {
-      source.setAttribute('src', CAMBRIDGE_HOST + src);
-    }
-  });
-
   definitionBlock.querySelectorAll('span.daud div[onclick]').forEach(div => {
     div.className = 'i-volume-up';
     const onclickAttr = div.getAttribute('onclick');
@@ -133,10 +134,25 @@ const parseDefinitionWithDOMParser = (html: string): string => {
       const match = onclickAttr.match(/(audio\d+)\./);
       if (match && match[1]) {
         const audioId = match[1];
-        div.setAttribute('onclick', `this.getRootNode().querySelector('#${audioId}').play()`);
+        const audioEl = doc.querySelector(`#${audioId}`);
+        if (audioEl) {
+          const sourceEl = audioEl.querySelector('source[type="audio/mpeg"]');
+          if (sourceEl) {
+            let src = sourceEl.getAttribute('src');
+            if (src) {
+              if (src.startsWith('/')) {
+                src = CAMBRIDGE_HOST + src;
+              }
+              div.setAttribute('data-audio-src', src);
+            }
+          }
+        }
       }
     }
+    div.removeAttribute('onclick');
   });
+
+  definitionBlock.querySelectorAll('audio.hdn').forEach(el => el.remove());
 
   return definitionBlock.innerHTML;
 };
@@ -157,9 +173,19 @@ const fetchDefinition = async (word: string): Promise<string> => {
 
 browser.runtime.onMessage.addListener(
   async (msg: unknown): Promise<{ response: string } | void> => {
-    const message = msg as Message;
+    const message = msg as Message & { type?: string; src?: string };
     
     if (message.target === 'offscreen') { // Ignore messages intended for the offscreen document
+      return;
+    }
+
+    if (message.type === 'play-audio' && message.src) {
+      if (process.env.BROWSER === 'chrome') {
+        await playAudioInOffscreen(message.src);
+      } else {
+        const audio = new Audio(message.src);
+        audio.play();
+      }
       return;
     }
 
