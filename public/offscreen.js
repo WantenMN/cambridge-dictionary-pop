@@ -10,16 +10,16 @@ function getAudioPlayer() {
   return audioPlayer;
 }
 
-async function handleMessages(message) {
+function handleMessages(message) {
   if (message.target !== 'offscreen') {
-    return;
+    return false;
   }
 
   if (message.type === 'play-audio') {
     const player = getAudioPlayer();
     player.src = message.data.src;
     player.play();
-    return;
+    return false;
   }
 
   if (message.type === 'parse-definition') {
@@ -38,7 +38,7 @@ async function handleMessages(message) {
         type: 'parse-definition-response',
         error: 'Definition not found'
       });
-      return;
+      return false;
     }
 
     // Process links within the definition block
@@ -83,5 +83,8 @@ async function handleMessages(message) {
       type: 'parse-definition-response',
       payload: definitionBlock.innerHTML
     });
+    return false;
   }
+  
+  return false;
 }
