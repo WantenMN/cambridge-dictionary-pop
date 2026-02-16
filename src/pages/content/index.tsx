@@ -16,6 +16,7 @@ let popupRoot: ReactDOM.Root | null = null;
 let isPopupOpen = false;
 let currentDisplayedWordInPopup = "";
 let hoverTimer: ReturnType<typeof setTimeout> | null = null;
+let isClickInsidePopupOrIcon = false;
 
 // TypeScript interfaces
 interface BackgroundResponse {
@@ -577,8 +578,8 @@ document.addEventListener("mouseup", (event) => {
       return;
     }
     
-    // If selected text exceeds 15 words, don't show the popup
-    if (countWords(selectedText) > 15) {
+    // If selected text exceeds 5 words, don't show the popup
+    if (countWords(selectedText) > 5) {
       removeElements();
       return;
     }
@@ -606,6 +607,38 @@ document.addEventListener("mouseup", (event) => {
   } else {
     // No text selected, selection collapsed, contains non-ASCII characters, 
     // spans too many lines, or exceeds word limit. Close popup/icon if they exist.
+    removeElements();
+  }
+});
+
+/**
+ * Track mousedown to detect if click is inside popup or icon
+ * This runs before selectionchange, so we can set a flag to prevent popup from closing
+ */
+document.addEventListener("mousedown", (event) => {
+  const popupContainer = document.getElementById(POPUP_ID);
+  const isInsideIcon = iconElement && (event.target === iconElement || iconElement.contains(event.target as Node));
+  const isInsidePopup = popupContainer && (event.target === popupContainer || popupContainer.contains(event.target as Node));
+  
+  isClickInsidePopupOrIcon = !!(isInsideIcon || isInsidePopup);
+}, true);
+
+/**
+ * Handle selection change events to detect when text is deselected
+ * This is needed because clicking on selected text clears the selection
+ */
+document.addEventListener("selectionchange", () => {
+  // If click was inside popup or icon, don't remove elements even if selection is cleared
+  if (isClickInsidePopupOrIcon) {
+    // Reset the flag for next time
+    isClickInsidePopupOrIcon = false;
+    return;
+  }
+  
+  const selection = window.getSelection();
+  
+  // If selection is collapsed or empty, remove the icon and popup
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0 || selection.toString().trim().length === 0) {
     removeElements();
   }
 });
