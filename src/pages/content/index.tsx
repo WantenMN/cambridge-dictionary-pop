@@ -37,7 +37,9 @@ const App = ({ initialWord }: { initialWord: string }) => {
   const [searchTerm, setSearchTerm] = useState(initialWord);
   const [htmlContent, setHtmlContent] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [history, setHistory] = useState<HistoryItem[]>([{ word: initialWord, htmlContent: "" }]);
+  const [history, setHistory] = useState<HistoryItem[]>([
+    { word: initialWord, htmlContent: "" },
+  ]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
@@ -48,13 +50,13 @@ const App = ({ initialWord }: { initialWord: string }) => {
    * Handle navigation to internal dictionary links
    */
   const handleInternalLinkClick = (newWord: string) => {
-    const cleanedWord = newWord.split('?')[0];
+    const cleanedWord = newWord.split("?")[0];
     if (cleanedWord === word) return;
 
     // Create new history item
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push({ word: cleanedWord, htmlContent: "" });
-    
+
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
     setSearchTerm(cleanedWord);
@@ -86,7 +88,10 @@ const App = ({ initialWord }: { initialWord: string }) => {
     // Update history with loaded content
     const updateHistoryWithContent = (content: string) => {
       const newHistory = [...history];
-      newHistory[historyIndex] = { ...newHistory[historyIndex], htmlContent: content };
+      newHistory[historyIndex] = {
+        ...newHistory[historyIndex],
+        htmlContent: content,
+      };
       setHistory(newHistory);
     };
 
@@ -96,20 +101,22 @@ const App = ({ initialWord }: { initialWord: string }) => {
       setHtmlContent("");
 
       try {
-        const response = await browser.runtime.sendMessage({ word }) as BackgroundResponse;
+        const response = (await browser.runtime.sendMessage({
+          word,
+        })) as BackgroundResponse;
         setHtmlContent(response.response);
-        setCache(prev => new Map(prev).set(word, response.response));
+        setCache((prev) => new Map(prev).set(word, response.response));
         updateHistoryWithContent(response.response);
         currentDisplayedWordInPopup = word;
-        setContentKey(prev => prev + 1); // Trigger animation
+        setContentKey((prev) => prev + 1); // Trigger animation
       } catch (error) {
         const errorMsg = "Error: Could not get definition.";
         setHtmlContent(errorMsg);
         updateHistoryWithContent(errorMsg);
-        setContentKey(prev => prev + 1); // Trigger animation even on error
+        setContentKey((prev) => prev + 1); // Trigger animation even on error
       } finally {
         setIsLoading(false);
-        setContentKey(prev => prev + 1); // Trigger animation when loading finishes
+        setContentKey((prev) => prev + 1); // Trigger animation when loading finishes
       }
     };
 
@@ -121,10 +128,10 @@ const App = ({ initialWord }: { initialWord: string }) => {
    */
   const handleSearch = () => {
     if (searchTerm === word) return;
-    
+
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push({ word: searchTerm, htmlContent: "" });
-    
+
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
     setWord(searchTerm);
@@ -142,7 +149,7 @@ const App = ({ initialWord }: { initialWord: string }) => {
    */
   const goBack = () => {
     if (!canGoBack) return;
-    
+
     const newIndex = historyIndex - 1;
     setHistoryIndex(newIndex);
     setWord(history[newIndex].word);
@@ -155,7 +162,7 @@ const App = ({ initialWord }: { initialWord: string }) => {
    */
   const goForward = () => {
     if (!canGoForward) return;
-    
+
     const newIndex = historyIndex + 1;
     setHistoryIndex(newIndex);
     setWord(history[newIndex].word);
@@ -168,13 +175,18 @@ const App = ({ initialWord }: { initialWord: string }) => {
    */
   const handleContentClick = (event: React.MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
-    const anchor = target.closest('a');
-    
+    const anchor = target.closest("a");
+
     if (anchor) {
-      const href = anchor.getAttribute('href');
-      if (href && href.trim().startsWith('https://dictionary.cambridge.org/dictionary/english/')) {
+      const href = anchor.getAttribute("href");
+      if (
+        href &&
+        href
+          .trim()
+          .startsWith("https://dictionary.cambridge.org/dictionary/english/")
+      ) {
         event.preventDefault();
-        const pathSegments = href.split('/');
+        const pathSegments = href.split("/");
         const wordFromLink = pathSegments[pathSegments.length - 1];
         if (wordFromLink) {
           handleInternalLinkClick(wordFromLink);
@@ -182,10 +194,13 @@ const App = ({ initialWord }: { initialWord: string }) => {
       }
     }
 
-    if (target.classList.contains('i-volume-up') && target.hasAttribute('data-audio-src')) {
-      const audioSrc = target.getAttribute('data-audio-src');
+    if (
+      target.classList.contains("i-volume-up") &&
+      target.hasAttribute("data-audio-src")
+    ) {
+      const audioSrc = target.getAttribute("data-audio-src");
       if (audioSrc) {
-        browser.runtime.sendMessage({ type: 'play-audio', src: audioSrc });
+        browser.runtime.sendMessage({ type: "play-audio", src: audioSrc });
       }
     }
   };
@@ -204,25 +219,46 @@ const App = ({ initialWord }: { initialWord: string }) => {
             </a>
           </h2>
           <div className="flex items-center">
-            <NavButton onClick={goBack} disabled={!canGoBack} direction="back" />
-            <NavButton onClick={goForward} disabled={!canGoForward} direction="forward" />
+            <NavButton
+              onClick={goBack}
+              disabled={!canGoBack}
+              direction="back"
+            />
+            <NavButton
+              onClick={goForward}
+              disabled={!canGoForward}
+              direction="forward"
+            />
             <CloseButton onClick={handleClose} />
           </div>
         </div>
         <div className="flex items-center p-2 pt-0">
-          <SearchInput 
-            value={searchTerm} 
-            onChange={setSearchTerm} 
-            onSearch={handleSearch} 
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            onSearch={handleSearch}
           />
           <SearchButton onClick={handleSearch} />
         </div>
       </div>
-      <div key={contentKey} className="p-4 overflow-y-auto flex-grow" onClick={handleContentClick}>
+      <div
+        key={contentKey}
+        className="p-4 overflow-y-auto flex-grow"
+        onClick={handleContentClick}
+      >
         {isLoading ? (
-          <p className="mb-0 leading-relaxed text-sm cdp-content-fade-in">Loading definition...</p>
+          <p className="mb-0 leading-relaxed text-sm cdp-content-fade-in">
+            Loading definition...
+          </p>
         ) : (
-          <div className="cdp-content-fade-in" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlContent, { ADD_ATTR: ['target', 'data-audio-src'] }) }} />
+          <div
+            className="cdp-content-fade-in"
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(htmlContent, {
+                ADD_ATTR: ["target", "data-audio-src"],
+              }),
+            }}
+          />
         )}
       </div>
     </div>
@@ -230,38 +266,40 @@ const App = ({ initialWord }: { initialWord: string }) => {
 };
 
 // Component for navigation buttons
-const NavButton = ({ 
-  onClick, 
-  disabled, 
-  direction 
-}: { 
-  onClick: () => void; 
-  disabled: boolean; 
-  direction: "back" | "forward"; 
+const NavButton = ({
+  onClick,
+  disabled,
+  direction,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  direction: "back" | "forward";
 }) => (
   <button
     onClick={onClick}
     disabled={disabled}
     className={`bg-transparent border-none flex justify-center items-center cursor-pointer p-2 m-2! rounded-full w-8 h-8 transition-colors duration-200 ${
-      disabled 
-        ? 'text-zinc-500 cursor-not-allowed' 
-        : 'hover:text-zinc-300 hover:bg-zinc-700'
+      disabled
+        ? "text-zinc-500 cursor-not-allowed"
+        : "hover:text-zinc-300 hover:bg-zinc-700"
     }`}
   >
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      fill="none" 
-      viewBox="0 0 24 24" 
-      strokeWidth={1.5} 
-      stroke="currentColor" 
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
       className="w-5 h-5"
     >
-      <path 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
-        d={direction === "back" 
-          ? "M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" 
-          : "M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"} 
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d={
+          direction === "back"
+            ? "M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+            : "M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
+        }
       />
     </svg>
   </button>
@@ -291,14 +329,14 @@ const CloseButton = ({ onClick }: { onClick: () => void }) => (
 );
 
 // Component for search input
-const SearchInput = ({ 
-  value, 
-  onChange, 
-  onSearch 
-}: { 
-  value: string; 
-  onChange: (value: string) => void; 
-  onSearch: () => void; 
+const SearchInput = ({
+  value,
+  onChange,
+  onSearch,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onSearch: () => void;
 }) => (
   <input
     type="text"
@@ -338,10 +376,10 @@ const createPopupContainer = (): HTMLDivElement => {
 };
 
 const injectIconStyles = () => {
-  const styleId = 'cambridge-dictionary-pop-icon-styles';
+  const styleId = "cambridge-dictionary-pop-icon-styles";
   if (document.getElementById(styleId)) return; // Only inject once
 
-  const styleEl = document.createElement('style');
+  const styleEl = document.createElement("style");
   styleEl.id = styleId;
   styleEl.textContent = `
     #${ICON_ID} {
@@ -370,13 +408,17 @@ const injectIconStyles = () => {
 /**
  * Create or update the dictionary icon element
  */
-const createIcon = (x: number, y: number, rectBottom: number): HTMLDivElement => {
-        if (!iconElement) {
-          injectIconStyles(); // Inject styles when icon is first created
-          iconElement = document.createElement("div");
-          iconElement.id = ICON_ID;
-          iconElement.style.backgroundImage = `url(${browser.runtime.getURL("icon-128.png")})`;
-          document.body.appendChild(iconElement);
+const createIcon = (
+  x: number,
+  y: number,
+  rectBottom: number,
+): HTMLDivElement => {
+  if (!iconElement) {
+    injectIconStyles(); // Inject styles when icon is first created
+    iconElement = document.createElement("div");
+    iconElement.id = ICON_ID;
+    iconElement.style.backgroundImage = `url(${browser.runtime.getURL("icon-128.png")})`;
+    document.body.appendChild(iconElement);
     // Handle click event
     iconElement.onclick = (e) => {
       e.stopPropagation();
@@ -426,7 +468,10 @@ const createIcon = (x: number, y: number, rectBottom: number): HTMLDivElement =>
       finalIconTop = topPositionIfBelow;
     }
     // Check if placing it above would make it go off the bottom of the screen
-    else if (topPositionIfAbove + iconHeight > window.scrollY + window.innerHeight) {
+    else if (
+      topPositionIfAbove + iconHeight >
+      window.scrollY + window.innerHeight
+    ) {
       finalIconTop = topPositionIfBelow;
     }
     // Otherwise, place it above
@@ -462,23 +507,23 @@ const showPopup = () => {
   let appContainer: HTMLDivElement;
 
   if (!shadowRoot) {
-    shadowRoot = popupHost.attachShadow({ mode: 'open' });
+    shadowRoot = popupHost.attachShadow({ mode: "open" });
 
-    const styleSheet = document.createElement('style');
+    const styleSheet = document.createElement("style");
     // Injecting the imported style strings
     styleSheet.textContent = styles + scssStyles;
     shadowRoot.appendChild(styleSheet);
 
-    appContainer = document.createElement('div');
+    appContainer = document.createElement("div");
     shadowRoot.appendChild(appContainer);
   } else {
-    appContainer = shadowRoot.querySelector('div')!;
+    appContainer = shadowRoot.querySelector("div")!;
   }
-  
+
   if (!popupRoot) {
     popupRoot = ReactDOM.createRoot(appContainer);
   }
-  
+
   popupRoot.render(<App initialWord={currentSelectedText} />);
   isPopupOpen = true;
   iconElement!.style.display = "none";
@@ -503,7 +548,7 @@ const removeElements = () => {
  */
 const isAsciiOnly = (text: string): boolean => {
   // Allowed non-ASCII characters
-  const allowedNonAscii = new Set(['“', '”', '’', '‘', '…', '–', '—']);
+  const allowedNonAscii = new Set(["“", "”", "’", "‘", "…", "–", "—"]);
 
   for (let i = 0; i < text.length; i++) {
     const charCode = text.charCodeAt(i);
@@ -522,13 +567,13 @@ const isAsciiOnly = (text: string): boolean => {
  */
 const spansMoreThanTwoLines = (range: Range): boolean => {
   const clientRects = range.getClientRects();
-  
+
   // If there are no rectangles, the selection is invalid
   if (clientRects.length === 0) return false;
-  
+
   // If there's only one rectangle, it can't span more than two lines
   if (clientRects.length === 1) return false;
-  
+
   // Get the unique line positions by rounding the top coordinates
   // This accounts for slight differences in positioning that might occur
   // due to inline elements, text decorations, etc.
@@ -538,7 +583,7 @@ const spansMoreThanTwoLines = (range: Range): boolean => {
     const linePos = Math.round(clientRects[i].top);
     linePositions.add(linePos);
   }
-  
+
   // If we have 2 or fewer unique line positions, it doesn't span more than two lines
   return linePositions.size > 2;
 };
@@ -548,7 +593,10 @@ const spansMoreThanTwoLines = (range: Range): boolean => {
  * Splits text on whitespace and filters out empty strings
  */
 const countWords = (text: string): number => {
-  return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  return text
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0).length;
 };
 
 /**
@@ -556,8 +604,12 @@ const countWords = (text: string): number => {
  */
 document.addEventListener("mouseup", (event) => {
   const popupContainer = document.getElementById(POPUP_ID);
-  const isClickInsideIcon = iconElement && (event.target === iconElement || iconElement.contains(event.target as Node));
-  const isClickInsidePopup = popupContainer && popupContainer.contains(event.target as Node);
+  const isClickInsideIcon =
+    iconElement &&
+    (event.target === iconElement ||
+      iconElement.contains(event.target as Node));
+  const isClickInsidePopup =
+    popupContainer && popupContainer.contains(event.target as Node);
 
   // If the click originated from the icon or popup, do not re-evaluate selection or close.
   if (isClickInsideIcon || isClickInsidePopup) {
@@ -567,30 +619,45 @@ document.addEventListener("mouseup", (event) => {
   const selection = window.getSelection();
   const selectedText = selection?.toString().trim();
 
-  // Check if selection is valid (not empty, not collapsed, contains only ASCII characters, 
+  // Check if selection is valid (not empty, not collapsed, contains only ASCII characters,
   // doesn't span more than two lines, and doesn't exceed 15 words)
-  if (selectedText && selectedText.length > 0 && selection && selection.rangeCount > 0 && !selection.isCollapsed && isAsciiOnly(selectedText)) {
+  if (
+    selectedText &&
+    selectedText.length > 0 &&
+    selection &&
+    selection.rangeCount > 0 &&
+    !selection.isCollapsed &&
+    isAsciiOnly(selectedText)
+  ) {
     const range = selection.getRangeAt(0);
-    
+
     // If selected text spans more than two lines, don't show the popup
     if (spansMoreThanTwoLines(range)) {
       removeElements();
       return;
     }
-    
+
     // If selected text exceeds 5 words, don't show the popup
     if (countWords(selectedText) > 5) {
       removeElements();
       return;
     }
-    
+
     // If icon is already displayed for the same selected text, do nothing.
-    if (iconElement && iconElement.style.display === "block" && selectedText === currentSelectedText) {
+    if (
+      iconElement &&
+      iconElement.style.display === "block" &&
+      selectedText === currentSelectedText
+    ) {
       return;
     }
 
     // If a new selection is made and icon already exists, animate it to the new position
-    if (iconElement && iconElement.style.display === "block" && selectedText !== currentSelectedText) {
+    if (
+      iconElement &&
+      iconElement.style.display === "block" &&
+      selectedText !== currentSelectedText
+    ) {
       currentSelectedText = selectedText;
       const rect = range.getBoundingClientRect();
       createIcon(event.clientX, rect.top, rect.bottom);
@@ -605,7 +672,7 @@ document.addEventListener("mouseup", (event) => {
     const rect = range.getBoundingClientRect();
     createIcon(event.clientX, rect.top, rect.bottom);
   } else {
-    // No text selected, selection collapsed, contains non-ASCII characters, 
+    // No text selected, selection collapsed, contains non-ASCII characters,
     // spans too many lines, or exceeds word limit. Close popup/icon if they exist.
     removeElements();
   }
@@ -615,13 +682,23 @@ document.addEventListener("mouseup", (event) => {
  * Track mousedown to detect if click is inside popup or icon
  * This runs before selectionchange, so we can set a flag to prevent popup from closing
  */
-document.addEventListener("mousedown", (event) => {
-  const popupContainer = document.getElementById(POPUP_ID);
-  const isInsideIcon = iconElement && (event.target === iconElement || iconElement.contains(event.target as Node));
-  const isInsidePopup = popupContainer && (event.target === popupContainer || popupContainer.contains(event.target as Node));
-  
-  isClickInsidePopupOrIcon = !!(isInsideIcon || isInsidePopup);
-}, true);
+document.addEventListener(
+  "mousedown",
+  (event) => {
+    const popupContainer = document.getElementById(POPUP_ID);
+    const isInsideIcon =
+      iconElement &&
+      (event.target === iconElement ||
+        iconElement.contains(event.target as Node));
+    const isInsidePopup =
+      popupContainer &&
+      (event.target === popupContainer ||
+        popupContainer.contains(event.target as Node));
+
+    isClickInsidePopupOrIcon = !!(isInsideIcon || isInsidePopup);
+  },
+  true,
+);
 
 /**
  * Handle selection change events to detect when text is deselected
@@ -634,11 +711,16 @@ document.addEventListener("selectionchange", () => {
     isClickInsidePopupOrIcon = false;
     return;
   }
-  
+
   const selection = window.getSelection();
-  
-  // If selection is collapsed or empty, remove the icon and popup
-  if (!selection || selection.isCollapsed || selection.rangeCount === 0 || selection.toString().trim().length === 0) {
+
+  // If selection is collapsed or empty, remove the icon (but not if popup is open)
+  if (!isPopupOpen && (
+    !selection ||
+    selection.isCollapsed ||
+    selection.rangeCount === 0 ||
+    selection.toString().trim().length === 0
+  )) {
     removeElements();
   }
 });
