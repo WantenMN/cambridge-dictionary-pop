@@ -17,6 +17,30 @@ let isPopupOpen = false;
 let currentDisplayedWordInPopup = "";
 let hoverTimer: ReturnType<typeof setTimeout> | null = null;
 let isClickInsidePopupOrIcon = false;
+type IconTriggerMode = "auto" | "alt" | "ctrl" | "doubleClick";
+const SETTINGS_DEFAULTS = {
+  iconTriggerMode: "auto" as IconTriggerMode,
+};
+let iconTriggerMode: IconTriggerMode = SETTINGS_DEFAULTS.iconTriggerMode;
+
+const loadSettings = async () => {
+  try {
+    const stored = await browser.storage.sync.get(SETTINGS_DEFAULTS);
+    iconTriggerMode = stored.iconTriggerMode as IconTriggerMode;
+  } catch (error) {
+    console.warn("Failed to load icon trigger settings.", error);
+  }
+};
+
+loadSettings();
+
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area !== "sync") return;
+  const change = changes.iconTriggerMode;
+  if (change && typeof change.newValue === "string") {
+    iconTriggerMode = change.newValue as IconTriggerMode;
+  }
+});
 
 // TypeScript interfaces
 interface BackgroundResponse {
@@ -526,7 +550,9 @@ const showPopup = () => {
 
   popupRoot.render(<App initialWord={currentSelectedText} />);
   isPopupOpen = true;
-  iconElement!.style.display = "none";
+  if (iconElement) {
+    iconElement.style.display = "none";
+  }
   hoverTimer = null;
 };
 
@@ -541,6 +567,17 @@ const removeElements = () => {
   popupRoot?.unmount();
   popupRoot = null;
   currentDisplayedWordInPopup = "";
+};
+
+const removeIconOnly = () => {
+  iconElement?.remove();
+  iconElement = null;
+  currentSelectedText = "";
+};
+
+const removeIconElement = () => {
+  iconElement?.remove();
+  iconElement = null;
 };
 
 /**
@@ -599,10 +636,38 @@ const countWords = (text: string): number => {
     .filter((word) => word.length > 0).length;
 };
 
+const getValidSelection = () => {
+  const selection = window.getSelection();
+  const selectedText = selection?.toString().trim();
+
+  if (
+    selectedText &&
+    selectedText.length > 0 &&
+    selection &&
+    selection.rangeCount > 0 &&
+    !selection.isCollapsed &&
+    isAsciiOnly(selectedText)
+  ) {
+    const range = selection.getRangeAt(0);
+
+    if (spansMoreThanTwoLines(range)) {
+      return null;
+    }
+
+    if (countWords(selectedText) > 5) {
+      return null;
+    }
+
+    return { selectedText, range };
+  }
+
+  return null;
+};
+
 /**
  * Handle text selection events
  */
-document.addEventListener("mouseup", (event) => {
+const handleSelection = (event: MouseEvent) => {
   const popupContainer = document.getElementById(POPUP_ID);
   const isClickInsideIcon =
     iconElement &&
@@ -616,33 +681,12 @@ document.addEventListener("mouseup", (event) => {
     return;
   }
 
-  const selection = window.getSelection();
-  const selectedText = selection?.toString().trim();
+  const selectionResult = getValidSelection();
 
   // Check if selection is valid (not empty, not collapsed, contains only ASCII characters,
   // doesn't span more than two lines, and doesn't exceed 15 words)
-  if (
-    selectedText &&
-    selectedText.length > 0 &&
-    selection &&
-    selection.rangeCount > 0 &&
-    !selection.isCollapsed &&
-    isAsciiOnly(selectedText)
-  ) {
-    const range = selection.getRangeAt(0);
-
-    // If selected text spans more than two lines, don't show the popup
-    if (spansMoreThanTwoLines(range)) {
-      removeElements();
-      return;
-    }
-
-    // If selected text exceeds 5 words, don't show the popup
-    if (countWords(selectedText) > 5) {
-      removeElements();
-      return;
-    }
-
+  if (selectionResult) {
+    const { selectedText, range } = selectionResult;
     // If icon is already displayed for the same selected text, do nothing.
     if (
       iconElement &&
@@ -676,6 +720,45 @@ document.addEventListener("mouseup", (event) => {
     // spans too many lines, or exceeds word limit. Close popup/icon if they exist.
     removeElements();
   }
+};
+
+document.addEventListener("mouseup", (event) => {
+  const popupContainer = document.getElementById(POPUP_ID);
+  const isClickInsideIcon =
+    iconElement &&
+    (event.target === iconElement ||
+      iconElement.contains(event.target as Node));
+  const isClickInsidePopup =
+    popupContainer && popupContainer.contains(event.target as Node);
+
+  if (isClickInsideIcon || isClickInsidePopup) {
+    return;
+  }
+
+  if (iconTriggerMode === "doubleClick") return;
+  if (iconTriggerMode === "alt" && !event.altKey) {
+    if (isPopupOpen) {
+      removeIconOnly();
+    } else {
+      removeElements();
+    }
+    return;
+  }
+  if (iconTriggerMode === "ctrl" && !event.ctrlKey) {
+    if (isPopupOpen) {
+      removeIconOnly();
+    } else {
+      removeElements();
+    }
+    return;
+  }
+
+  handleSelection(event);
+});
+
+document.addEventListener("dblclick", (event) => {
+  if (iconTriggerMode !== "doubleClick") return;
+  handleSelection(event);
 });
 
 /**
@@ -723,4 +806,16 @@ document.addEventListener("selectionchange", () => {
   )) {
     removeElements();
   }
+});
+
+browser.runtime.onMessage.addListener((msg: unknown) => {
+  const message = msg as { type?: string };
+  if (message.type !== "open-popup-from-context-menu") return;
+
+  const selectionResult = getValidSelection();
+  if (!selectionResult) return;
+
+  currentSelectedText = selectionResult.selectedText;
+  removeIconElement();
+  showPopup();
 });
