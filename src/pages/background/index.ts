@@ -27,6 +27,8 @@ interface Message {
 }
 
 const CAMBRIDGE_HOST = 'https://dictionary.cambridge.org';
+const CONTEXT_MENU_ID = "cdp-open-popup";
+const api = typeof browser !== "undefined" ? browser : chrome;
 
 // --- Chrome-specific offscreen document implementation ---
 let creating: Promise<void> | null; // A promise that resolves when the offscreen document is created
@@ -171,6 +173,67 @@ const fetchDefinition = async (word: string): Promise<string> => {
   }
 };
 
+const isAsciiOnly = (text: string): boolean => {
+  const allowedNonAscii = new Set(["“", "”", "’", "‘", "…", "–", "—"]);
+  for (let i = 0; i < text.length; i++) {
+    const charCode = text.charCodeAt(i);
+    if (charCode > 127 && !allowedNonAscii.has(text[i])) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const countWords = (text: string): number =>
+  text
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0).length;
+
+const isValidSelectionText = (text?: string): boolean => {
+  if (!text) return false;
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (!isAsciiOnly(trimmed)) return false;
+  return countWords(trimmed) <= 5;
+};
+
+const ensureContextMenu = () => {
+  try {
+    api.contextMenus.create({
+      id: CONTEXT_MENU_ID,
+      title: "Cambridge Dictionary Pop",
+      contexts: ["selection"],
+    });
+  } catch (error) {
+    // Ignore errors if the menu already exists.
+  }
+};
+
+ensureContextMenu();
+
+api.runtime.onInstalled.addListener(() => {
+  ensureContextMenu();
+});
+
+api.runtime.onStartup?.addListener(() => {
+  ensureContextMenu();
+});
+
+api.contextMenus.onShown?.addListener((info) => {
+  if (!info.menuIds.includes(CONTEXT_MENU_ID)) return;
+  const enabled = isValidSelectionText(info.selectionText);
+  api.contextMenus.update(CONTEXT_MENU_ID, { enabled });
+  api.contextMenus.refresh();
+});
+
+api.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId !== CONTEXT_MENU_ID) return;
+  if (!tab?.id) return;
+  if (!isValidSelectionText(info.selectionText)) return;
+  api.tabs.sendMessage(tab.id, { type: "open-popup-from-context-menu" });
+});
+
 browser.runtime.onMessage.addListener(
   async (msg: unknown): Promise<{ response: string } | void> => {
     const message = msg as Message & { type?: string; src?: string };
@@ -202,3 +265,7 @@ browser.runtime.onMessage.addListener(
     }
   }
 );
+
+browser.action.onClicked.addListener(() => {
+  browser.runtime.openOptionsPage();
+});
