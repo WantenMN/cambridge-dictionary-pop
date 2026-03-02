@@ -36,7 +36,7 @@
     "eslint-plugin-react": "^7.37.5",
     "fs-extra": "^11.3.0",
     "globals": "^16.4.0",
-    "nodemon": "^3.1.10",
+    "nodemon": "^3.1.14",
     "sass": "^1.93.0",
     "tailwindcss": "^4.1.8",
     "ts-node": "^10.9.2",
