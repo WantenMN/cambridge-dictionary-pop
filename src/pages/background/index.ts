@@ -29,6 +29,15 @@ interface Message {
 const CAMBRIDGE_HOST = 'https://dictionary.cambridge.org';
 const CONTEXT_MENU_ID = "cdp-open-popup";
 const api = typeof browser !== "undefined" ? browser : chrome;
+type ContextMenusApi = typeof browser.contextMenus & {
+  onShown?: {
+    addListener: (
+      callback: (info: browser.Menus.OnShownInfoType) => void
+    ) => void;
+  };
+  refresh?: () => void;
+};
+const contextMenusApi = api.contextMenus as ContextMenusApi | undefined;
 
 // --- Chrome-specific offscreen document implementation ---
 let creating: Promise<void> | null; // A promise that resolves when the offscreen document is created
@@ -160,7 +169,6 @@ const parseDefinitionWithDOMParser = (html: string): string => {
 };
 // --- End of Firefox-specific implementation ---
 
-
 const fetchDefinition = async (word: string): Promise<string> => {
   const url = `${CAMBRIDGE_HOST}/dictionary/english/${word.toLowerCase()}`;
   const response = await fetch(url);
@@ -199,8 +207,9 @@ const isValidSelectionText = (text?: string): boolean => {
 };
 
 const ensureContextMenu = () => {
+  if (!contextMenusApi?.create) return;
   try {
-    api.contextMenus.create({
+    contextMenusApi.create({
       id: CONTEXT_MENU_ID,
       title: "Cambridge Dictionary Pop",
       contexts: ["selection"],
@@ -220,14 +229,14 @@ api.runtime.onStartup?.addListener(() => {
   ensureContextMenu();
 });
 
-api.contextMenus.onShown?.addListener((info) => {
+contextMenusApi?.onShown?.addListener((info: browser.Menus.OnShownInfoType) => {
   if (!info.menuIds.includes(CONTEXT_MENU_ID)) return;
   const enabled = isValidSelectionText(info.selectionText);
-  api.contextMenus.update(CONTEXT_MENU_ID, { enabled });
-  api.contextMenus.refresh();
+  contextMenusApi.update(CONTEXT_MENU_ID, { enabled });
+  contextMenusApi.refresh?.();
 });
 
-api.contextMenus.onClicked.addListener((info, tab) => {
+contextMenusApi?.onClicked?.addListener((info: browser.Menus.OnClickData, tab?: browser.Tabs.Tab) => {
   if (info.menuItemId !== CONTEXT_MENU_ID) return;
   if (!tab?.id) return;
   if (!isValidSelectionText(info.selectionText)) return;
