@@ -1,4 +1,12 @@
 import browser from "webextension-polyfill";
+import {
+  CAMBRIDGE_HOST,
+  CLOUDFLARE_CHALLENGE_TEXT,
+  FILTER_SELECTORS,
+  parseDefinitionWithDOMParser,
+  type ExtractDefinitionResult,
+} from "../../shared/cambridge";
+import { isValidSelectionText } from "../../shared/text";
 
 // This will be defined by Vite during the build process
 declare const process: {
@@ -9,31 +17,12 @@ declare const process: {
 
 console.log(`Background script loaded for ${process.env.BROWSER}!`);
 
-const FILTER_SELECTORS: string[] = [
-  ".pr.x.lbb.lb-cm",
-  ".dwl.hax",
-  ".i.i-plus.ca_hi",
-  ".i.i-comment.fs14",
-  ".lmt-10.hax",
-  ".meta.dmeta",
-  ".daccord",
-  ".smartt.daccord",
-  ".fixed.top-0.left-0.w-full "
-];
-
 interface Message {
   word?: string;
   target?: string;
 }
-interface ExtractDefinitionResult {
-  ok: boolean;
-  html?: string;
-  reason?: "not-ready" | "challenge" | "not-found" | "unknown";
-}
 
-const CAMBRIDGE_HOST = 'https://dictionary.cambridge.org';
 const CONTEXT_MENU_ID = "cdp-open-popup";
-const CLOUDFLARE_CHALLENGE_TEXT = "Enable JavaScript and cookies to continue";
 const api = typeof browser !== "undefined" ? browser : chrome;
 const cambridgeReadyWaiters = new Map<number, () => void>();
 type ContextMenusApi = typeof browser.contextMenus & {
@@ -133,62 +122,6 @@ async function playAudioInOffscreen(src: string) {
 }
 // --- End of Chrome-specific implementation ---
 
-
-// --- Firefox-specific DOMParser implementation ---
-const parseDefinitionWithDOMParser = (html: string): string => {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
-
-  FILTER_SELECTORS.forEach(selector => {
-    doc.querySelectorAll(selector).forEach(element => element.remove());
-  });
-
-  const definitionBlock = doc.querySelector(".page");
-  if (!definitionBlock) {
-    throw new Error("Definition not found");
-  }
-
-  // The original implementation re-parsed the HTML. We can optimize this by processing the links on the found element directly.
-  const links = definitionBlock.querySelectorAll('a');
-  links.forEach(link => {
-    const href = link.getAttribute('href');
-    if (href && href.startsWith('/')) {
-      link.setAttribute('href', CAMBRIDGE_HOST + href);
-    }
-    link.setAttribute('target', '_blank');
-    link.setAttribute('rel', 'noopener noreferrer');
-  });
-
-  definitionBlock.querySelectorAll('span.daud div[onclick]').forEach(div => {
-    div.className = 'i-volume-up';
-    const onclickAttr = div.getAttribute('onclick');
-    if (onclickAttr) {
-      const match = onclickAttr.match(/(audio\d+)\./);
-      if (match && match[1]) {
-        const audioId = match[1];
-        const audioEl = doc.querySelector(`#${audioId}`);
-        if (audioEl) {
-          const sourceEl = audioEl.querySelector('source[type="audio/mpeg"]');
-          if (sourceEl) {
-            let src = sourceEl.getAttribute('src');
-            if (src) {
-              if (src.startsWith('/')) {
-                src = CAMBRIDGE_HOST + src;
-              }
-              div.setAttribute('data-audio-src', src);
-            }
-          }
-        }
-      }
-    }
-    div.removeAttribute('onclick');
-  });
-
-  definitionBlock.querySelectorAll('audio.hdn').forEach(el => el.remove());
-
-  return definitionBlock.innerHTML;
-};
-// --- End of Firefox-specific implementation ---
 
 const waitForTabLoaded = (tabId: number, timeoutMs = 20000): Promise<void> =>
   new Promise((resolve, reject) => {
@@ -304,31 +237,6 @@ const fetchDefinition = async (word: string): Promise<string> => {
     }
     return parseDefinitionWithDOMParser(html);
   }
-};
-
-const isAsciiOnly = (text: string): boolean => {
-  const allowedNonAscii = new Set(["“", "”", "’", "‘", "…", "–", "—"]);
-  for (let i = 0; i < text.length; i++) {
-    const charCode = text.charCodeAt(i);
-    if (charCode > 127 && !allowedNonAscii.has(text[i])) {
-      return false;
-    }
-  }
-  return true;
-};
-
-const countWords = (text: string): number =>
-  text
-    .trim()
-    .split(/\s+/)
-    .filter((word) => word.length > 0).length;
-
-const isValidSelectionText = (text?: string): boolean => {
-  if (!text) return false;
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-  if (!isAsciiOnly(trimmed)) return false;
-  return countWords(trimmed) <= 5;
 };
 
 const ensureContextMenu = () => {

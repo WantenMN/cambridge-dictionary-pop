@@ -4,22 +4,17 @@ import browser from "webextension-polyfill";
 import DOMPurify from "dompurify";
 import styles from "./style.css?inline";
 import scssStyles from "./cdp.scss?inline";
+import {
+  CAMBRIDGE_HOST,
+  CLOUDFLARE_CHALLENGE_TEXT,
+  transformDefinitionBlock,
+  type ExtractDefinitionResult,
+} from "../../shared/cambridge";
+import { isValidSelectionText } from "../../shared/text";
 
 // Constants
 const POPUP_ID = "cambridge-dictionary-pop-popup";
 const ICON_ID = "cambridge-dictionary-pop-icon";
-const CAMBRIDGE_HOST = "https://dictionary.cambridge.org";
-const FILTER_SELECTORS: string[] = [
-  ".pr.x.lbb.lb-cm",
-  ".dwl.hax",
-  ".i.i-plus.ca_hi",
-  ".i.i-comment.fs14",
-  ".lmt-10.hax",
-  ".meta.dmeta",
-  ".daccord",
-  ".smartt.daccord",
-  ".fixed.top-0.left-0.w-full ",
-];
 
 // Global state
 let currentSelectedText = "";
@@ -69,18 +64,12 @@ interface HistoryItem {
   htmlContent: string;
 }
 
-interface ExtractDefinitionResult {
-  ok: boolean;
-  html?: string;
-  reason?: "not-ready" | "challenge" | "not-found" | "unknown";
-}
-
 let cambridgeReadyNotified = false;
 let cambridgeReadyObserver: MutationObserver | null = null;
 
 const getExtractReadiness = (): ExtractDefinitionResult => {
   const bodyText = document.body?.innerText ?? "";
-  if (bodyText.includes("Enable JavaScript and cookies to continue")) {
+  if (bodyText.includes(CLOUDFLARE_CHALLENGE_TEXT)) {
     return { ok: false, reason: "challenge" };
   }
 
@@ -129,46 +118,7 @@ const extractDefinitionFromCurrentDocument = (): ExtractDefinitionResult => {
   const definitionBlock = document.querySelector(".page") as Element;
 
   const cloned = definitionBlock.cloneNode(true) as HTMLElement;
-
-  FILTER_SELECTORS.forEach((selector) => {
-    cloned.querySelectorAll(selector).forEach((element) => element.remove());
-  });
-
-  cloned.querySelectorAll("a").forEach((link) => {
-    const href = link.getAttribute("href");
-    if (href && href.startsWith("/")) {
-      link.setAttribute("href", CAMBRIDGE_HOST + href);
-    }
-    link.setAttribute("target", "_blank");
-    link.setAttribute("rel", "noopener noreferrer");
-  });
-
-  cloned.querySelectorAll("span.daud div[onclick]").forEach((div) => {
-    div.className = "i-volume-up";
-    const onclickAttr = div.getAttribute("onclick");
-    if (onclickAttr) {
-      const match = onclickAttr.match(/(audio\d+)\./);
-      if (match && match[1]) {
-        const audioId = match[1];
-        const audioEl = cloned.querySelector(`#${audioId}`);
-        if (audioEl) {
-          const sourceEl = audioEl.querySelector('source[type="audio/mpeg"]');
-          if (sourceEl) {
-            let src = sourceEl.getAttribute("src");
-            if (src?.startsWith("/")) {
-              src = CAMBRIDGE_HOST + src;
-            }
-            if (src) {
-              div.setAttribute("data-audio-src", src);
-            }
-          }
-        }
-      }
-    }
-    div.removeAttribute("onclick");
-  });
-
-  cloned.querySelectorAll("audio.hdn").forEach((el) => el.remove());
+  transformDefinitionBlock(cloned, cloned);
 
   return { ok: true, html: cloned.innerHTML };
 };
@@ -330,7 +280,7 @@ const App = ({ initialWord }: { initialWord: string }) => {
         href &&
         href
           .trim()
-          .startsWith("https://dictionary.cambridge.org/dictionary/english/")
+          .startsWith(`${CAMBRIDGE_HOST}/dictionary/english/`)
       ) {
         event.preventDefault();
         const pathSegments = href.split("/");
@@ -358,7 +308,7 @@ const App = ({ initialWord }: { initialWord: string }) => {
         <div className="flex justify-between items-center">
           <h2 className="text-2xl! m-4! p-0!">
             <a
-              href={`https://dictionary.cambridge.org/dictionary/english/${word.toLowerCase()}`}
+              href={`${CAMBRIDGE_HOST}/dictionary/english/${word.toLowerCase()}`}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -704,23 +654,6 @@ const removeIconElement = () => {
 };
 
 /**
- * Check if text contains only ASCII characters
- */
-const isAsciiOnly = (text: string): boolean => {
-  // Allowed non-ASCII characters
-  const allowedNonAscii = new Set(["“", "”", "’", "‘", "…", "–", "—"]);
-
-  for (let i = 0; i < text.length; i++) {
-    const charCode = text.charCodeAt(i);
-    // Check if it's outside ASCII range and not in the allowed non-ASCII set
-    if (charCode > 127 && !allowedNonAscii.has(text[i])) {
-      return false;
-    }
-  }
-  return true;
-};
-
-/**
  * Check if selected text spans more than two lines
  * This function now properly accounts for selections that span HTML elements
  * by checking the actual visual line positions rather than just counting rectangles
@@ -748,17 +681,6 @@ const spansMoreThanTwoLines = (range: Range): boolean => {
   return linePositions.size > 2;
 };
 
-/**
- * Count the number of words in a string
- * Splits text on whitespace and filters out empty strings
- */
-const countWords = (text: string): number => {
-  return text
-    .trim()
-    .split(/\s+/)
-    .filter((word) => word.length > 0).length;
-};
-
 const getValidSelection = () => {
   const selection = window.getSelection();
   const selectedText = selection?.toString().trim();
@@ -769,15 +691,11 @@ const getValidSelection = () => {
     selection &&
     selection.rangeCount > 0 &&
     !selection.isCollapsed &&
-    isAsciiOnly(selectedText)
+    isValidSelectionText(selectedText)
   ) {
     const range = selection.getRangeAt(0);
 
     if (spansMoreThanTwoLines(range)) {
-      return null;
-    }
-
-    if (countWords(selectedText) > 5) {
       return null;
     }
 
