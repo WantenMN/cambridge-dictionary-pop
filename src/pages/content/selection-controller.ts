@@ -30,11 +30,13 @@ export const createSelectionController = ({
   getIconTriggerMode,
   onRequestOpenPopup,
 }: SelectionControllerOptions): SelectionController => {
+  const POPUP_OPEN_GUARD_MS = 450;
   let currentSelectedText = "";
   let iconElement: HTMLDivElement | null = null;
   let hoverTimer: ReturnType<typeof setTimeout> | null = null;
   let isClickInsidePopupOrIcon = false;
   let selectionChangeTriggerTimer: ReturnType<typeof setTimeout> | null = null;
+  let popupGuardUntil = 0;
 
   const removeIcon = (clearSelectedText: boolean) => {
     iconElement?.remove();
@@ -51,6 +53,11 @@ export const createSelectionController = ({
 
   const openPopupForCurrentSelection = () => {
     if (!currentSelectedText) return;
+    if (selectionChangeTriggerTimer) {
+      clearTimeout(selectionChangeTriggerTimer);
+      selectionChangeTriggerTimer = null;
+    }
+    popupGuardUntil = Date.now() + POPUP_OPEN_GUARD_MS;
     onRequestOpenPopup(currentSelectedText);
     if (iconElement) {
       iconElement.style.display = "none";
@@ -305,10 +312,20 @@ export const createSelectionController = ({
       },
       true,
     );
+    document.addEventListener(
+      "touchstart",
+      (event) => {
+        isClickInsidePopupOrIcon = isInsidePopupOrIcon(event.target);
+      },
+      { capture: true, passive: true },
+    );
 
     document.addEventListener("selectionchange", () => {
       if (isClickInsidePopupOrIcon) {
         isClickInsidePopupOrIcon = false;
+        return;
+      }
+      if (Date.now() < popupGuardUntil) {
         return;
       }
 
@@ -330,10 +347,14 @@ export const createSelectionController = ({
       }
 
       if (!IS_TOUCH_LIKE_DEVICE || getIconTriggerMode() !== "auto") return;
+      if (isPopupOpen()) return;
       if (selectionChangeTriggerTimer) {
         clearTimeout(selectionChangeTriggerTimer);
       }
       selectionChangeTriggerTimer = setTimeout(() => {
+        if (Date.now() < popupGuardUntil || isPopupOpen()) {
+          return;
+        }
         handleSelection(null);
       }, 120);
     });
