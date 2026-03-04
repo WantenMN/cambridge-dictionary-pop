@@ -29,11 +29,16 @@ let isPopupOpen = false;
 let currentDisplayedWordInPopup = "";
 let hoverTimer: ReturnType<typeof setTimeout> | null = null;
 let isClickInsidePopupOrIcon = false;
+let selectionChangeTriggerTimer: ReturnType<typeof setTimeout> | null = null;
 type IconTriggerMode = "auto" | "alt" | "ctrl" | "doubleClick";
 const SETTINGS_DEFAULTS = {
   iconTriggerMode: "auto" as IconTriggerMode,
 };
 let iconTriggerMode: IconTriggerMode = SETTINGS_DEFAULTS.iconTriggerMode;
+const IS_TOUCH_LIKE_DEVICE =
+  ("ontouchstart" in window) ||
+  (typeof window.matchMedia === "function" &&
+    window.matchMedia("(pointer: coarse)").matches);
 
 const loadSettings = async () => {
   try {
@@ -782,20 +787,27 @@ const getValidSelection = () => {
   return null;
 };
 
+const isInsidePopupOrIcon = (target: EventTarget | null): boolean => {
+  if (!target || !(target instanceof Node)) return false;
+  const popupContainer = document.getElementById(POPUP_ID);
+  const isInsideIcon =
+    iconElement && (target === iconElement || iconElement.contains(target));
+  const isInsidePopup =
+    popupContainer &&
+    (target === popupContainer || popupContainer.contains(target));
+
+  return !!(isInsideIcon || isInsidePopup);
+};
+
 /**
  * Handle text selection events
  */
-const handleSelection = (event: MouseEvent) => {
-  const popupContainer = document.getElementById(POPUP_ID);
-  const isClickInsideIcon =
-    iconElement &&
-    (event.target === iconElement ||
-      iconElement.contains(event.target as Node));
-  const isClickInsidePopup =
-    popupContainer && popupContainer.contains(event.target as Node);
-
-  // If the click originated from the icon or popup, do not re-evaluate selection or close.
-  if (isClickInsideIcon || isClickInsidePopup) {
+const handleSelection = (
+  target: EventTarget | null,
+  anchorClientX?: number,
+) => {
+  // If the interaction originated from the icon or popup, do not re-evaluate selection.
+  if (isInsidePopupOrIcon(target)) {
     return;
   }
 
@@ -822,7 +834,8 @@ const handleSelection = (event: MouseEvent) => {
     ) {
       currentSelectedText = selectedText;
       const rect = range.getBoundingClientRect();
-      createIcon(event.clientX, rect.top, rect.bottom);
+      const iconX = anchorClientX ?? rect.left + rect.width / 2;
+      createIcon(iconX, rect.top, rect.bottom);
       return;
     }
 
@@ -832,7 +845,8 @@ const handleSelection = (event: MouseEvent) => {
     }
     currentSelectedText = selectedText;
     const rect = range.getBoundingClientRect();
-    createIcon(event.clientX, rect.top, rect.bottom);
+    const iconX = anchorClientX ?? rect.left + rect.width / 2;
+    createIcon(iconX, rect.top, rect.bottom);
   } else {
     // No text selected, selection collapsed, contains non-ASCII characters,
     // spans too many lines, or exceeds word limit. Close popup/icon if they exist.
@@ -841,15 +855,7 @@ const handleSelection = (event: MouseEvent) => {
 };
 
 document.addEventListener("mouseup", (event) => {
-  const popupContainer = document.getElementById(POPUP_ID);
-  const isClickInsideIcon =
-    iconElement &&
-    (event.target === iconElement ||
-      iconElement.contains(event.target as Node));
-  const isClickInsidePopup =
-    popupContainer && popupContainer.contains(event.target as Node);
-
-  if (isClickInsideIcon || isClickInsidePopup) {
+  if (isInsidePopupOrIcon(event.target)) {
     return;
   }
 
@@ -871,12 +877,25 @@ document.addEventListener("mouseup", (event) => {
     return;
   }
 
-  handleSelection(event);
+  handleSelection(event.target, event.clientX);
 });
 
 document.addEventListener("dblclick", (event) => {
   if (iconTriggerMode !== "doubleClick") return;
-  handleSelection(event);
+  handleSelection(event.target, event.clientX);
+});
+
+document.addEventListener("touchend", (event) => {
+  if (isInsidePopupOrIcon(event.target)) {
+    return;
+  }
+
+  // Modifier-key modes are desktop-only interactions.
+  if (iconTriggerMode === "doubleClick") return;
+  if (iconTriggerMode === "alt" || iconTriggerMode === "ctrl") return;
+
+  const touchPoint = event.changedTouches[0];
+  handleSelection(event.target, touchPoint?.clientX);
 });
 
 /**
@@ -923,7 +942,22 @@ document.addEventListener("selectionchange", () => {
     selection.toString().trim().length === 0
   )) {
     removeElements();
+    if (selectionChangeTriggerTimer) {
+      clearTimeout(selectionChangeTriggerTimer);
+      selectionChangeTriggerTimer = null;
+    }
+    return;
   }
+
+  // Firefox Android long-press selection can skip mouseup/touchend.
+  // On touch-like devices, use a small debounce to trigger icon display.
+  if (!IS_TOUCH_LIKE_DEVICE || iconTriggerMode !== "auto") return;
+  if (selectionChangeTriggerTimer) {
+    clearTimeout(selectionChangeTriggerTimer);
+  }
+  selectionChangeTriggerTimer = setTimeout(() => {
+    handleSelection(null);
+  }, 120);
 });
 
 browser.runtime.onMessage.addListener((msg: unknown) => {
