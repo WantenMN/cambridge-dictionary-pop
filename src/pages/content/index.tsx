@@ -8,6 +8,18 @@ import scssStyles from "./cdp.scss?inline";
 // Constants
 const POPUP_ID = "cambridge-dictionary-pop-popup";
 const ICON_ID = "cambridge-dictionary-pop-icon";
+const CAMBRIDGE_HOST = "https://dictionary.cambridge.org";
+const FILTER_SELECTORS: string[] = [
+  ".pr.x.lbb.lb-cm",
+  ".dwl.hax",
+  ".i.i-plus.ca_hi",
+  ".i.i-comment.fs14",
+  ".lmt-10.hax",
+  ".meta.dmeta",
+  ".daccord",
+  ".smartt.daccord",
+  ".fixed.top-0.left-0.w-full ",
+];
 
 // Global state
 let currentSelectedText = "";
@@ -51,6 +63,112 @@ interface HistoryItem {
   word: string;
   htmlContent: string;
 }
+
+interface ExtractDefinitionResult {
+  ok: boolean;
+  html?: string;
+  reason?: "not-ready" | "challenge" | "not-found" | "unknown";
+}
+
+let cambridgeReadyNotified = false;
+let cambridgeReadyObserver: MutationObserver | null = null;
+
+const getExtractReadiness = (): ExtractDefinitionResult => {
+  const bodyText = document.body?.innerText ?? "";
+  if (bodyText.includes("Enable JavaScript and cookies to continue")) {
+    return { ok: false, reason: "challenge" };
+  }
+
+  const definitionBlock = document.querySelector(".page");
+  if (!definitionBlock) {
+    return { ok: false, reason: "not-ready" };
+  }
+
+  return { ok: true };
+};
+
+const maybeNotifyCambridgeReady = () => {
+  if (cambridgeReadyNotified) return;
+  const readiness = getExtractReadiness();
+  if (!readiness.ok) return;
+
+  cambridgeReadyNotified = true;
+  browser.runtime.sendMessage({ type: "cambridge-ready" }).catch(() => {
+    // Ignore if background is not available at this moment.
+  });
+};
+
+const setupCambridgeReadyNotifier = () => {
+  if (!window.location.hostname.includes("dictionary.cambridge.org")) return;
+
+  maybeNotifyCambridgeReady();
+  if (cambridgeReadyNotified) return;
+
+  cambridgeReadyObserver?.disconnect();
+  cambridgeReadyObserver = new MutationObserver(() => {
+    maybeNotifyCambridgeReady();
+    if (cambridgeReadyNotified) {
+      cambridgeReadyObserver?.disconnect();
+      cambridgeReadyObserver = null;
+    }
+  });
+  cambridgeReadyObserver.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+};
+
+const extractDefinitionFromCurrentDocument = (): ExtractDefinitionResult => {
+  const readiness = getExtractReadiness();
+  if (!readiness.ok) return readiness;
+  const definitionBlock = document.querySelector(".page") as Element;
+
+  const cloned = definitionBlock.cloneNode(true) as HTMLElement;
+
+  FILTER_SELECTORS.forEach((selector) => {
+    cloned.querySelectorAll(selector).forEach((element) => element.remove());
+  });
+
+  cloned.querySelectorAll("a").forEach((link) => {
+    const href = link.getAttribute("href");
+    if (href && href.startsWith("/")) {
+      link.setAttribute("href", CAMBRIDGE_HOST + href);
+    }
+    link.setAttribute("target", "_blank");
+    link.setAttribute("rel", "noopener noreferrer");
+  });
+
+  cloned.querySelectorAll("span.daud div[onclick]").forEach((div) => {
+    div.className = "i-volume-up";
+    const onclickAttr = div.getAttribute("onclick");
+    if (onclickAttr) {
+      const match = onclickAttr.match(/(audio\d+)\./);
+      if (match && match[1]) {
+        const audioId = match[1];
+        const audioEl = cloned.querySelector(`#${audioId}`);
+        if (audioEl) {
+          const sourceEl = audioEl.querySelector('source[type="audio/mpeg"]');
+          if (sourceEl) {
+            let src = sourceEl.getAttribute("src");
+            if (src?.startsWith("/")) {
+              src = CAMBRIDGE_HOST + src;
+            }
+            if (src) {
+              div.setAttribute("data-audio-src", src);
+            }
+          }
+        }
+      }
+    }
+    div.removeAttribute("onclick");
+  });
+
+  cloned.querySelectorAll("audio.hdn").forEach((el) => el.remove());
+
+  return { ok: true, html: cloned.innerHTML };
+};
+
+setupCambridgeReadyNotifier();
 
 /**
  * Main popup component for displaying dictionary definitions
@@ -810,6 +928,19 @@ document.addEventListener("selectionchange", () => {
 
 browser.runtime.onMessage.addListener((msg: unknown) => {
   const message = msg as { type?: string };
+
+  if (message.type === "extract-cambridge-definition") {
+    try {
+      const result = extractDefinitionFromCurrentDocument();
+      return Promise.resolve(result);
+    } catch (error) {
+      return Promise.resolve({
+        ok: false,
+        reason: "unknown",
+      });
+    }
+  }
+
   if (message.type !== "open-popup-from-context-menu") return;
 
   const selectionResult = getValidSelection();
